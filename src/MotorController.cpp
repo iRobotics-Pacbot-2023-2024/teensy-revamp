@@ -22,7 +22,10 @@ void MotorController::update() {
     int32_t dPos = currPos - prevPos;
     prevPos = currPos;
 
-    double dt = MOTOR_UPDATE_INTERVAL_MS / 1000.;
+    double currentTs = micros() / 1e6;
+    double dt = currentTs - prevTs;
+    prevTs = currentTs;
+
     double velocity = dPos / dt;
     double error = targetVel - velocity;
 

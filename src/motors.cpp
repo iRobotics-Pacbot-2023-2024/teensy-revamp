@@ -1,23 +1,14 @@
 #include "motors.h"
 
-#include <TaskSchedulerDeclarations.h>
-
 #include "Motor.h"
 #include "MotorController.h"
 
 void motorsUpdate();
 
-Task motorUpdateTask(MOTOR_UPDATE_INTERVAL_MS * TASK_MILLISECOND, TASK_FOREVER, &motorsUpdate);
-
-// 0 = back left, 1 = back right, 2 = front left, 3 = front right 
+// 0 = rear left, 1 = rear right, 2 = front left, 3 = front right 
 Motor motors[] {{6, 5}, {9, 8}, {11, 10}, {23, 12}};
 Encoder encoders[] {{0, 1}, {2, 3}, {4, 7}, {22, 17}};
 MotorController controllers[] {{motors[0], encoders[0]}, {motors[1], encoders[1]}, {motors[2], encoders[2]}, {motors[3], encoders[3]}};
-
-void motorsInit(Scheduler& ts) {
-    ts.addTask(motorUpdateTask);
-    motorUpdateTask.enable();
-}
 
 void motorsUpdate() {
     for (MotorController& controller : controllers) {
