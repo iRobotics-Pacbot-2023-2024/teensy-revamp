@@ -98,31 +98,6 @@ void loop() {
 
     switch (movementDirection) {
         case MovementDirection::NORTH:
-            fw_vel = movementSpeed;
-            break;
-        case MovementDirection::EAST:
-            lateral_vel = -movementSpeed;
-            break;
-        case MovementDirection::SOUTH:
-            fw_vel = -movementSpeed;
-            break;
-        case MovementDirection::WEST:
-            lateral_vel = movementSpeed;
-            break;
-        default:
-            break;
-    }
-
-    if (movementDirection != MovementDirection::NONE) {
-
-        
-        fw_vel -= tofVelocity_calc(front, avgDist, pTOF);
-        fw_vel += tofVelocity_calc(rear, avgDist, pTOF);
-        lateral_vel -= tofVelocity_calc(left, avgDist, pTOF);
-        lateral_vel += tofVelocity_calc(right, avgDist, pTOF);
-
-        switch (movementDirection) {
-        case MovementDirection::NORTH:
             if(front < thresh_stop)
                 movementDirection = MovementDirection::NONE;
             break;
@@ -142,6 +117,28 @@ void loop() {
             break;
     }
 
+    switch (movementDirection) {
+        case MovementDirection::NORTH:
+            fw_vel = movementSpeed;
+            break;
+        case MovementDirection::EAST:
+            lateral_vel = -movementSpeed;
+            break;
+        case MovementDirection::SOUTH:
+            fw_vel = -movementSpeed;
+            break;
+        case MovementDirection::WEST:
+            lateral_vel = movementSpeed;
+            break;
+        default:
+            break;
+    }
+
+    if (movementDirection != MovementDirection::NONE) {
+        fw_vel -= tofVelocity_calc(front, avgDist, pTOF);
+        fw_vel += tofVelocity_calc(rear, avgDist, pTOF);
+        lateral_vel -= tofVelocity_calc(left, avgDist, pTOF);
+        lateral_vel += tofVelocity_calc(right, avgDist, pTOF);
 
         turn_vel = kPRot * (targetYaw - yaw) + kDRot * -angVel;
     }
