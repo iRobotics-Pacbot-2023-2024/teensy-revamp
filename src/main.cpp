@@ -17,6 +17,11 @@ MovementDirection movementDirection = MovementDirection::NONE;
 
 double targetYaw = 0;
 
+double tofVelocity_calc(double tof, double avgDist, double p) {
+    double dist = min(tof, avgDist);
+    return p*dist;
+}
+
 void setup() {
     Serial.begin(115200);
 
@@ -35,6 +40,10 @@ constexpr double kP = 0.5;
 constexpr double kD = 0.1;
 
 constexpr double movementSpeed = 16;
+
+constexpr double pTOF = 1;
+constexpr double avgDist = 1;
+constexpr double thresh_stop = 1;
 
 uint32_t lastDirectionChangeTime = 0;
 
@@ -104,15 +113,34 @@ void loop() {
     }
 
     if (movementDirection != MovementDirection::NONE) {
-        if (front < 1) {
-            fw_vel -= 2;
-        } else if (right < 1) {
-            lateral_vel += 2;
-        } else if (left < 1) {
-            lateral_vel -= 2;
-        } else if (rear < 1) {
-            fw_vel += 2;
-        }
+
+        
+        fw_vel -= tofVelocity_calc(front, avgDist, pTOF);
+        fw_vel += tofVelocity_calc(rear, avgDist, pTOF);
+        lateral_vel -= tofVelocity_calc(left, avgDist, pTOF);
+        lateral_vel += tofVelocity_calc(right, avgDist, pTOF);
+
+        switch (movementDirection) {
+        case MovementDirection::NORTH:
+            if(front < thresh_stop)
+                movementDirection = MovementDirection::NONE;
+            break;
+        case MovementDirection::EAST:
+            if(right < thresh_stop)
+                movementDirection = MovementDirection::NONE;
+            break;
+        case MovementDirection::SOUTH:
+            if(rear < thresh_stop)
+                movementDirection = MovementDirection::NONE;
+            break;
+        case MovementDirection::WEST:
+            if(left < thresh_stop)
+                movementDirection = MovementDirection::NONE;
+            break;
+        default:
+            break;
+    }
+
 
         turn_vel = kP * (targetYaw - yaw) + kD * -angVel;
     }
