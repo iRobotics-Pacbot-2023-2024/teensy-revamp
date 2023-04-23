@@ -36,8 +36,9 @@ void setup() {
     targetYaw = imuGetYaw();
 }
 
-constexpr double kP = 0.5;
-constexpr double kD = 0.1;
+// TODO: actually tune these
+constexpr double kPRot = 0.5;
+constexpr double kDRot = 0.5;
 
 constexpr double movementSpeed = 16;
 
@@ -142,7 +143,7 @@ void loop() {
     }
 
 
-        turn_vel = kP * (targetYaw - yaw) + kD * -angVel;
+        turn_vel = kPRot * (targetYaw - yaw) + kDRot * -angVel;
     }
 
     Serial.printf("front: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
