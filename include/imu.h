@@ -1,3 +1,5 @@
+#pragma once
+
 void imuInit();
 
 bool imuUpdateReadings();

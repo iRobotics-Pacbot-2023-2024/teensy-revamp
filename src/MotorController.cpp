@@ -1,10 +1,5 @@
 #include "MotorController.h"
 
-constexpr double TICKS_PER_REV = 7. * 4 * 50;
-constexpr double WHEEL_DIAMETER = 38 / 25.4;
-constexpr double IN_PER_REV = M_PI * WHEEL_DIAMETER;
-constexpr double TICKS_PER_IN = TICKS_PER_REV * IN_PER_REV;
-
 constexpr double kP = 4;
 constexpr double kI = 4;
 

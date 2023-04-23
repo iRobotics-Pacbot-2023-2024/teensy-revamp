@@ -3,6 +3,7 @@
 #include <TaskScheduler.h>
 
 #include "imu.h"
+#include "motors.h"
 
 Scheduler ts{};
 
@@ -10,6 +11,7 @@ void setup() {
     Serial.begin(115200);
 
     imuInit();
+    motorsInit(ts);
 }
 
 void loop() {
