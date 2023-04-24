@@ -1,12 +1,12 @@
 #include "MotorController.h"
 
 constexpr double kP = 4;
-constexpr double kI = 4;
+constexpr double kI = 0;
 
 constexpr double kV = 2.7304 / 0x7fffp0;
 constexpr double kS = 3603. / 0x7fffp0;
 
-constexpr double MAX_INTEGRAL = 0.4 / kV;
+constexpr double MAX_INTEGRAL = 0.15 / kV;
 
 MotorController::MotorController(Motor& motor, Encoder& encoder):
     motor(motor), encoder(encoder) {
@@ -40,4 +40,5 @@ void MotorController::update() {
 
 void MotorController::setTarget(double velTicks) {
     targetVel = velTicks;
+    update();
 }

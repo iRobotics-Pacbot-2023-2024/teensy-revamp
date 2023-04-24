@@ -27,7 +27,7 @@ Adafruit_BNO08x imu{};
 void setReports();
 
 void imuInit() {
-    if (!imu.begin_I2C()) {
+    if (!imu.begin_I2C(74, &Wire)) {
         while (true) {
             Serial.println("Failed to start IMU");
             delay(100);
@@ -38,14 +38,14 @@ void imuInit() {
 }
 
 void setReports() {
-    if (!imu.enableReport(SH2_ROTATION_VECTOR)) {
+    if (!imu.enableReport(SH2_ROTATION_VECTOR, 1000)) {
         while (true) {
             Serial.println("Could not enable rotation vector");
             delay(100);
         }
     }
 
-    if (!imu.enableReport(SH2_GYROSCOPE_CALIBRATED)) {
+    if (!imu.enableReport(SH2_GYROSCOPE_CALIBRATED, 1000)) {
         while (true) {
             Serial.println("Could not enable calibrated gyro");
             delay(109);
@@ -60,11 +60,15 @@ bool hasAngVel = false;
 sh2_Gyroscope_t gyro;
 
 bool imuUpdateReadings() {
+    uint32_t start = micros();
     if (imu.wasReset()) {
         setReports();
     }
+    // Serial.printf("a%d\n", micros() - start);
     sh2_SensorValue_t reading;
-    while (imu.getSensorEvent(&reading)) {
+    if (imu.getSensorEvent(&reading)) {
+        // Serial.printf("a%d\n", micros() - start);
+        // Serial.printf("WACK: %hhd\n", reading.sensorId);
         switch(reading.sensorId) {
             case SH2_ROTATION_VECTOR:
                 hasRotation = true;

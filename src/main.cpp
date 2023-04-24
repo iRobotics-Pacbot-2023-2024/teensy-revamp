@@ -1,19 +1,20 @@
 #include <Arduino.h>
 #include <Encoder.h>
+#include <Wire.h>
 
 #include "imu.h"
 #include "motors.h"
 #include "tofs.h"
 
 // TODO: actually tune these
-constexpr double kPRot = 0.5;
-constexpr double kDRot = 0.5;
+constexpr double kPRot = 0;
+constexpr double kDRot = 0;
 
-constexpr double movementSpeed = 16;
+constexpr double movementSpeed = 4;
 
 constexpr double pTOF = 1;
-constexpr double avgDist = 1;
-constexpr double thresh_stop = 1;
+constexpr double avgDist = 1.5;
+constexpr double thresh_stop = 2;
 
 enum class MovementDirection {
     NORTH,
@@ -29,9 +30,12 @@ double targetYaw = 0;
 
 void setup() {
     Serial.begin(115200);
+    Serial5.begin(115200);
 
     imuInit();
     tofInit();
+
+    Wire.setClock(1000000);
 
     delay(5000);
     while (!imuUpdateReadings()) {
@@ -48,10 +52,16 @@ void tofFeedback(double& fw_vel, double& lateral_vel);
 void imuFeedback(double& turn_vel);
 
 void loop() {
+    uint32_t start = micros();
+
     updateDirectionFromSerial();
 
+    // Serial.printf("1!!! time: %d\n", micros() - start);
+
     imuUpdateReadings();
+    // Serial.printf("2!!! time: %d\n", micros() - start);
     tofUpdateReadings();
+    // Serial.printf("3!!! time: %d\n", micros() - start);
 
     if (!isCurrDirectionSafe()) {
         movementDirection = MovementDirection::NONE;
@@ -67,20 +77,25 @@ void loop() {
         imuFeedback(turn_vel);
     }
 
-    Serial.printf("fw: %f, lat: %f, turn: %f\n", fw_vel, lateral_vel, turn_vel);
-    Serial.printf("direction: %d\n", static_cast<int>(movementDirection));
+    // Serial.printf("fw: %f, lat: %f, turn: %f\n", fw_vel, lateral_vel, turn_vel);
+    // Serial.printf("direction: %d\n", static_cast<int>(movementDirection));
 
     motorsSetVelocity(fw_vel, lateral_vel, turn_vel);
+    // Serial.printf("4!!! time: %d\n", micros() - start);
 
-    delay(20);
+    motorsUpdate();
+
+    // Serial.printf("5!!! time: %d\n", micros() - start);
+
+    // delay(20);
 }
 
 
 void updateDirectionFromSerial() {
     static uint32_t lastSerialUpdate = 0;
 
-    while (Serial1.available()) {
-        char c = Serial1.read();
+    while (Serial5.available()) {
+        char c = Serial5.read();
         switch (c) {
             case 'n':
                 movementDirection = MovementDirection::NORTH;
@@ -106,7 +121,7 @@ void updateDirectionFromSerial() {
         lastSerialUpdate = millis();
     }
 
-    if (millis() - lastSerialUpdate > 300) {
+    if (millis() - lastSerialUpdate > 1000) {
         movementDirection = MovementDirection::NONE;
     }
 }
@@ -120,6 +135,8 @@ bool isCurrDirectionSafe() {
     double right = tofGetRightIn();
     double rear = tofGetRearIn();
     double left = tofGetLeftIn();
+
+    // Serial.printf("left: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
 
     switch (movementDirection) {
         case MovementDirection::NORTH:
@@ -165,7 +182,7 @@ void tofFeedback(double& fw_vel, double& lateral_vel) {
     double rear = tofGetRearIn();
     double left = tofGetLeftIn();
 
-    Serial.printf("front: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
+    // Serial.printf("front: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
 
     fw_vel -= tofVelocity_calc(front, avgDist, pTOF);
     fw_vel += tofVelocity_calc(rear, avgDist, pTOF);
@@ -177,7 +194,7 @@ void imuFeedback(double& turn_vel) {
     double yaw = imuGetYaw();
     double angVel = imuGetAngVel();
 
-    Serial.printf("yaw: %f, ang vel: %f\n", yaw * 180 / M_PI, angVel * 180 / M_PI);
+    // Serial.printf("yaw: %f, ang vel: %f\n", yaw * 180 / M_PI, angVel * 180 / M_PI);
 
     turn_vel = kPRot * (targetYaw - yaw) + kDRot * -angVel;
 }

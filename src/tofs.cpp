@@ -19,6 +19,12 @@ void tofInit() {
                 delay(1000);
             }
         }
+        // status = tof.VL53L4CX_SetMeasurementTimingBudgetMicroSeconds(20000);
+        if (status != 0) {
+            while (true) {
+                Serial.printf("tof %d: timing budget: %d\n", i, status);
+            }
+        }
         status = tof.VL53L4CX_StartMeasurement();
         if (status != 0) {
             while (true) {
