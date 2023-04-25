@@ -54,8 +54,6 @@ void imuFeedback(double& turn_vel);
 void loop() {
     uint32_t start = micros();
 
-    movementDirection = MovementDirection::NONE;
-
     updateDirectionFromSerial();
 
 
