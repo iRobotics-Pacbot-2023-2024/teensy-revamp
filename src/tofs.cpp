@@ -19,7 +19,6 @@ void tofInit() {
                 delay(1000);
             }
         }
-        // status = tof.VL53L4CX_SetMeasurementTimingBudgetMicroSeconds(20000);
         if (status != 0) {
             while (true) {
                 Serial.printf("tof %d: timing budget: %d\n", i, status);
@@ -39,6 +38,25 @@ void tofInit() {
                 delay(1000);
             }
         }
+
+        // the number of microseconds that the sensor will take for each measurement
+        status = tof.VL53L4CX_SetMeasurementTimingBudgetMicroSeconds(8000);
+        if(status != 0){
+            while (true){
+                Serial.printf("tof %d: clear: %d\n", i, status);
+                delay(1000);
+            }
+        }
+        
+        // the maximum distance that the sensor can read, not sure what units
+        status = tof.VL53L4CX_SetTuningParameter(VL53L4CX_TUNINGPARM_RESET_MERGE_THRESHOLD, 5000);
+        if(status != 0){
+            while (true){
+                Serial.printf("tof %d: clear: %d\n", i, status);
+                delay(1000);
+            }
+        }
+        
     }
 }
 
@@ -66,14 +84,16 @@ void tofUpdateReadings() {
             continue;
         }
 
-        uint16_t min_distance = 0xffff;
-        for (int j = 0; j < results.NumberOfObjectsFound; j++) {
-            int16_t range = results.RangeData[j].RangeMilliMeter;
-            if (range > 0 && range < min_distance) {
-                min_distance = results.RangeData[j].RangeMilliMeter;
-            }
-        }
-        tofDistance[i] = min_distance;
+        // uint16_t min_distance = 0xffff;
+        // for (int j = 0; j < results.NumberOfObjectsFound; j++) {
+        //     int16_t range = results.RangeData[j].RangeMilliMeter;
+        //     if (range > 0 && range < min_distance) {
+        //         min_distance = results.RangeData[j].RangeMilliMeter;
+        //     }
+        // }
+        // tofDistance[i] = min_distance;
+
+        tofDistance[i] = results.RangeData->RangeMinMilliMeter;
 
         if (status == 0) {
             status = tof.VL53L4CX_ClearInterruptAndStartMeasurement();

@@ -54,7 +54,10 @@ void imuFeedback(double& turn_vel);
 void loop() {
     uint32_t start = micros();
 
+    movementDirection = MovementDirection::NONE;
+
     updateDirectionFromSerial();
+
 
     // Serial.printf("1!!! time: %d\n", micros() - start);
 
@@ -88,6 +91,7 @@ void loop() {
     // Serial.printf("5!!! time: %d\n", micros() - start);
 
     // delay(20);
+
 }
 
 
