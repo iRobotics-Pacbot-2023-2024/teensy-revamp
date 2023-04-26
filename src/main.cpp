@@ -7,14 +7,14 @@
 #include "tofs.h"
 
 // TODO: actually tune these
-constexpr double kPRot = 0;
+constexpr double kPRot = 1.50;
 constexpr double kDRot = 0;
 
 constexpr double movementSpeed = 4;
 
-constexpr double pTOF = 1;
-constexpr double avgDist = 1.5;
-constexpr double thresh_stop = 2;
+constexpr double pTOF = -0.6;
+constexpr double avgDist = 1.55;
+constexpr double thresh_stop = 3;
 
 enum class MovementDirection {
     NORTH,
@@ -52,14 +52,18 @@ void tofFeedback(double& fw_vel, double& lateral_vel);
 void imuFeedback(double& turn_vel);
 
 void loop() {
-    uint32_t start = micros();
+    uint32_t  start = micros();
 
-    updateDirectionFromSerial();
+    // updateDirectionFromSerial();
+
+    movementDirection = MovementDirection::WEST;
 
 
     // Serial.printf("1!!! time: %d\n", micros() - start);
 
     imuUpdateReadings();
+
+
     // Serial.printf("2!!! time: %d\n", micros() - start);
     tofUpdateReadings();
     // Serial.printf("3!!! time: %d\n", micros() - start);
@@ -78,8 +82,8 @@ void loop() {
         imuFeedback(turn_vel);
     }
 
-    // Serial.printf("fw: %f, lat: %f, turn: %f\n", fw_vel, lateral_vel, turn_vel);
-    // Serial.printf("direction: %d\n", static_cast<int>(movementDirection));
+    Serial.printf("fw: %f, lat: %f, turn: %f\n", fw_vel, lateral_vel, turn_vel);
+    Serial.printf("direction: %d\n", static_cast<int>(movementDirection));
 
     motorsSetVelocity(fw_vel, lateral_vel, turn_vel);
     // Serial.printf("4!!! time: %d\n", micros() - start);
@@ -138,7 +142,7 @@ bool isCurrDirectionSafe() {
     double rear = tofGetRearIn();
     double left = tofGetLeftIn();
 
-    // Serial.printf("left: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
+    Serial.printf("left: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
 
     switch (movementDirection) {
         case MovementDirection::NORTH:
@@ -196,7 +200,7 @@ void imuFeedback(double& turn_vel) {
     double yaw = imuGetYaw();
     double angVel = imuGetAngVel();
 
-    // Serial.printf("yaw: %f, ang vel: %f\n", yaw * 180 / M_PI, angVel * 180 / M_PI);
+    Serial.printf("yaw: %f, ang vel: %f\n", (yaw - targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     turn_vel = kPRot * (targetYaw - yaw) + kDRot * -angVel;
 }

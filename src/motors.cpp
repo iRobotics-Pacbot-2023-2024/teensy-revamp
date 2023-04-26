@@ -30,9 +30,9 @@ void motorsSetVelocity(double fw_vel_in, double lateral_vel_in, double turn_vel_
 
     double max_vel = abs(turn_vel) + abs(fw_vel) + abs(lateral_vel);
     if (max_vel > MAX_TICKS_PER_SEC) {
-        turn_vel /= max_vel;
-        fw_vel /= max_vel;
-        lateral_vel /= max_vel;
+        turn_vel *= MAX_TICKS_PER_SEC / max_vel;
+        fw_vel *= MAX_TICKS_PER_SEC / max_vel;
+        lateral_vel *= MAX_TICKS_PER_SEC / max_vel;
     }
 
     double fl_vel = fw_vel - lateral_vel - turn_vel;
