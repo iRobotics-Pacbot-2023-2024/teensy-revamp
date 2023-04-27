@@ -24,7 +24,7 @@ constexpr double TICKS_PER_IN = TICKS_PER_REV / IN_PER_REV;
 
 constexpr double TRACK_RADIUS = 2.2;
 
-void getEncodersValues(int32_t *encoder_values) { //return int array of encoder values
+void getEncodersValues(double *encoder_values) { //return int array of encoder values
     int i =0 ;
     for (MotorController& controller : controllers) {
         encoder_values[i] = controller.readEncoder()/TICKS_PER_IN;
