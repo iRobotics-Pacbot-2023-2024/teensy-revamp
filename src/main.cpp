@@ -77,14 +77,21 @@ void baseMovement(double& fw_vel, double& lateral_vel);
 void tofFeedback(double& fw_vel, double& lateral_vel);
 void imuFeedback(double& turn_vel);
 void resetOdom(double& x, double&y, char dir);
-void incOdom(double& x, double& y, double& theta, int32_t flEnc, int32_t frEnc, int32_t blEnc, int32_t brEnc);
+void incOdom(double& x, double& y, double& theta, double flEnc, double frEnc, double blEnc, double brEnc);
 
 void loop() {
     uint32_t start = micros();
 
     // updateDirectionFromSerial();
    
-    movementDirection = MovementDirection::NORTH;
+    if(x > -31)
+        movementDirection = MovementDirection::WEST;
+    else
+        if(y < 32)
+            movementDirection = MovementDirection::NORTH;
+        else
+            movementDirection = MovementDirection::EAST;
+    
     // if(x > -14.4)
     //     movementDirection = MovementDirection::WEST;
     // else{
@@ -118,9 +125,6 @@ void loop() {
     getEncodersValues(curr_encoders);
     for(int i = 0; i < 4; i++){
         d_encoders[i] = curr_encoders[i] - prev_encoders[i];
-        Serial.printf("dEncoders: %f\n", d_encoders[i]);
-        Serial.printf("prevEnc: %f\n", prev_encoders[i]);
-        Serial.printf("curEnc: %f\n", curr_encoders[i]);
     }
     for(int i = 0; i < 4; i++){
         prev_encoders[i] = curr_encoders[i];
@@ -320,18 +324,18 @@ void resetOdom(double& x, double&y, char dir){
             break;
     }
 }
-const double sn = 1/(pow(2,.5));
-void incOdom(double& x, double& y, double& theta, int32_t blEnc, int32_t brEnc, int32_t flEnc, int32_t frEnc){
+const double sn = 1/(2*pow(2,.5));
+void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, double flEnc, double frEnc){
     
     double x_new = 0, y_new = 0;
-    x_new += sn*(flEnc + frEnc - brEnc - blEnc);
-    y_new += sn*(flEnc - frEnc - brEnc + blEnc);
+    x_new += -sn*(flEnc + frEnc - brEnc - blEnc);
+    y_new += sn*(-flEnc + frEnc + brEnc - blEnc);
  
     // x += x_new*cos(theta) - y_new*sin(theta);
     // y += x_new*sin(theta) + y_new*cos(theta); 
     x+= x_new;
     y+= y_new;
-    //Serial.printf("x: %f, y: %f, brEnc: %f \n", x, y, brEnc );
+    Serial.printf("x: %f, y: %f, moveDir: %f \n", x, y, movementDirection );
 
     //Serial.printf("fl: %f, fr: %f, bl: %f, br: %f\n", flEnc,frEnc, blEnc, brEnc);
 }
