@@ -65,6 +65,8 @@ bool isCurrDirectionSafe();
 void baseMovement(double& fw_vel, double& lateral_vel);
 void tofFeedback(double& fw_vel, double& lateral_vel);
 void imuFeedback(double& turn_vel);
+void resetOdom(double& x, double&y, char dir);
+void incOdom(double& x, double& y, double& theta, int flEnc, int frEnc, int blEnc, int brEnc);
 
 void loop() {
     uint32_t start = micros();
@@ -108,6 +110,7 @@ void loop() {
     // Serial.printf("4!!! time: %d\n", micros() - start);
 
     motorsUpdate();
+    
 
     // Serial.printf("5!!! time: %d\n", micros() - start);
 
@@ -222,4 +225,39 @@ void imuFeedback(double& turn_vel) {
     //Serial.printf("yaw: %f, ang vel: %f\n", (yaw - targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     turn_vel = kPRot * (targetYaw - yaw) + kDRot * -angVel;
+}
+
+void resetOdom(double& x, double&y, char dir){
+    switch(dir){
+        case 'n': 
+            y = 0.0;
+            break;
+        case 's': 
+            y = 0.0;
+            break;
+        case 'e': 
+            x = 0.0;
+            break;
+        case 'w': 
+            x = 0.0;
+            break;
+
+        case 'r':
+            x = 0.0;
+            y = 0.0;
+            break;
+
+        default:
+            break;
+    }
+}
+const double sn = 1/(pow(2,.5));
+void incOdom(double& x, double& y, double& theta, int flEnc, int frEnc, int blEnc, int brEnc){
+    
+    double x_new = 0, y_new = 0;
+    x_new += sn*(flEnc + frEnc - brEnc - blEnc);
+    y_new += sn*(flEnc - frEnc - brEnc + blEnc);
+
+    x += x_new*cos(theta) - y_new*sin(theta);
+    y += x_new*sin(theta) + y_new*cos(theta); 
 }
