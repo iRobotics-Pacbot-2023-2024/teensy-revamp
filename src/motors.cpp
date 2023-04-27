@@ -18,7 +18,7 @@ int32_t * getEncodersValues() { //return int array of encoder values
     int32_t encoder_values[4];
     int i =0 ;
     for (MotorController& controller : controllers) {
-        encoder_values[i] = controller.readEncoder();
+        encoder_values[i] = controller.readEncoder()/TICKS_PER_IN;
         i++;
     }
     return encoder_values;

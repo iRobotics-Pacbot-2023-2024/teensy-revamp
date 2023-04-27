@@ -94,12 +94,13 @@ void loop() {
     double yaw = imuGetYaw();
     double angVel = imuGetAngVel();
 
-    int32_t [] encoder = getEncoderValues();
+    int32_t encoder[4];
     printf("Encoders: rl: %d rr: %d fl: %d fr: %d", encoder[0], encoder[1], encoder[2], encoder[3]);
     incOdom(x, y, yaw, encoder[0], encoder[1], encoder[2], encoder[3]);
 
     Serial.printf("yaw: %f, ang vel: %f\n", (yaw) * 180 / M_PI, angVel * 180 / M_PI);
 
+    Serial.printf("X: %f, Y: %f\n", x,y);
     if (movementDirection != MovementDirection::NONE) {
         baseMovement(fw_vel, lateral_vel);
         tofFeedback(fw_vel, lateral_vel);
@@ -113,7 +114,7 @@ void loop() {
     // Serial.printf("4!!! time: %d\n", micros() - start);
 
     motorsUpdate();
-    MotorCo
+    
     // Serial.printf("5!!! time: %d\n", micros() - start);
 
     // delay(20);
