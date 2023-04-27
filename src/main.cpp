@@ -7,12 +7,27 @@
 #include "tofs.h"
 
 // TODO: actually tune these
+/* for 4 inches/sec 
+
 constexpr double kPRot = 1.50;
-constexpr double kDRot = 0;
+constexpr double kDRot = 0.00;
 
 constexpr double movementSpeed = 4;
 
 constexpr double pTOF = -0.6;
+constexpr double avgDist = 1.55;
+constexpr double thresh_stop = 3;
+
+
+*/
+
+
+constexpr double kPRot = 3.00;
+constexpr double kDRot = 0.50;
+
+constexpr double movementSpeed = 7;
+
+constexpr double pTOF = -1.5;
 constexpr double avgDist = 1.55;
 constexpr double thresh_stop = 3;
 
@@ -52,13 +67,11 @@ void tofFeedback(double& fw_vel, double& lateral_vel);
 void imuFeedback(double& turn_vel);
 
 void loop() {
-    uint32_t  start = micros();
+    uint32_t start = micros();
 
     // updateDirectionFromSerial();
-
+   
     movementDirection = MovementDirection::WEST;
-
-
     // Serial.printf("1!!! time: %d\n", micros() - start);
 
     imuUpdateReadings();
@@ -68,13 +81,19 @@ void loop() {
     tofUpdateReadings();
     // Serial.printf("3!!! time: %d\n", micros() - start);
 
-    if (!isCurrDirectionSafe()) {
+    if (!isCurrDirectionSafe())
+    {
         movementDirection = MovementDirection::NONE;
     }
 
     double fw_vel = 0;
     double lateral_vel = 0;
     double turn_vel = 0;
+
+    double yaw = imuGetYaw();
+    double angVel = imuGetAngVel();
+
+    Serial.printf("yaw: %f, ang vel: %f\n", (yaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     if (movementDirection != MovementDirection::NONE) {
         baseMovement(fw_vel, lateral_vel);
@@ -200,7 +219,7 @@ void imuFeedback(double& turn_vel) {
     double yaw = imuGetYaw();
     double angVel = imuGetAngVel();
 
-    Serial.printf("yaw: %f, ang vel: %f\n", (yaw - targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
+    //Serial.printf("yaw: %f, ang vel: %f\n", (yaw - targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     turn_vel = kPRot * (targetYaw - yaw) + kDRot * -angVel;
 }
