@@ -42,7 +42,7 @@ enum class MovementDirection {
 MovementDirection movementDirection = MovementDirection::NONE;
 
 double targetYaw = 0;
-
+double x, y = 0;
 void setup() {
     Serial.begin(115200);
     Serial5.begin(115200);
@@ -82,7 +82,6 @@ void loop() {
     // Serial.printf("2!!! time: %d\n", micros() - start);
     tofUpdateReadings();
     // Serial.printf("3!!! time: %d\n", micros() - start);
-
     if (!isCurrDirectionSafe())
     {
         movementDirection = MovementDirection::NONE;
@@ -94,6 +93,10 @@ void loop() {
 
     double yaw = imuGetYaw();
     double angVel = imuGetAngVel();
+
+    int32_t [] encoder = getEncoderValues();
+    printf("Encoders: rl: %d rr: %d fl: %d fr: %d", encoder[0], encoder[1], encoder[2], encoder[3]);
+    incOdom(x, y, yaw, encoder[0], encoder[1], encoder[2], encoder[3]);
 
     Serial.printf("yaw: %f, ang vel: %f\n", (yaw) * 180 / M_PI, angVel * 180 / M_PI);
 
@@ -110,8 +113,7 @@ void loop() {
     // Serial.printf("4!!! time: %d\n", micros() - start);
 
     motorsUpdate();
-    
-
+    MotorCo
     // Serial.printf("5!!! time: %d\n", micros() - start);
 
     // delay(20);
@@ -252,7 +254,7 @@ void resetOdom(double& x, double&y, char dir){
     }
 }
 const double sn = 1/(pow(2,.5));
-void incOdom(double& x, double& y, double& theta, int flEnc, int frEnc, int blEnc, int brEnc){
+void incOdom(double& x, double& y, double& theta, int32_t blEnc, int32_t brEnc, int32_t flEnc, int32_t frEnc){
     
     double x_new = 0, y_new = 0;
     x_new += sn*(flEnc + frEnc - brEnc - blEnc);
@@ -260,4 +262,5 @@ void incOdom(double& x, double& y, double& theta, int flEnc, int frEnc, int blEn
 
     x += x_new*cos(theta) - y_new*sin(theta);
     y += x_new*sin(theta) + y_new*cos(theta); 
+    Serial.printf("x: %f, y: %f\n", x, y );
 }

@@ -14,6 +14,16 @@ void motorsUpdate() {
     }
 }
 
+int32_t * getEncodersValues() { //return int array of encoder values
+    int32_t encoder_values[4];
+    int i =0 ;
+    for (MotorController& controller : controllers) {
+        encoder_values[i] = controller.readEncoder();
+        i++;
+    }
+    return encoder_values;
+}
+
 constexpr double MAX_TICKS_PER_SEC = 8000;
 
 constexpr double TICKS_PER_REV = 7. * 4 * 50;

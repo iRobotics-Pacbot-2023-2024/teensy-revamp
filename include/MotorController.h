@@ -17,7 +17,7 @@ class MotorController {
 
     public:
         MotorController(Motor& motor, Encoder& encoder);
-
         void setTarget(double velTicks);
+        int32_t readEncoder();
         void update();
 };

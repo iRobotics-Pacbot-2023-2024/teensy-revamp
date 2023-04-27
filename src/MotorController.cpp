@@ -38,6 +38,10 @@ void MotorController::update() {
     motor.setThrottle(outThrottle);
 }
 
+int32_t MotorController::readEncoder() {
+    return encoder.read();
+}
+
 void MotorController::setTarget(double velTicks) {
     targetVel = velTicks;
     update();
