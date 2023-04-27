@@ -14,15 +14,6 @@ void motorsUpdate() {
     }
 }
 
-int32_t * getEncodersValues() { //return int array of encoder values
-    int32_t encoder_values[4];
-    int i =0 ;
-    for (MotorController& controller : controllers) {
-        encoder_values[i] = controller.readEncoder()/TICKS_PER_IN;
-        i++;
-    }
-    return encoder_values;
-}
 
 constexpr double MAX_TICKS_PER_SEC = 8000;
 
@@ -32,6 +23,14 @@ constexpr double IN_PER_REV = M_PI * WHEEL_DIAMETER;
 constexpr double TICKS_PER_IN = TICKS_PER_REV / IN_PER_REV;
 
 constexpr double TRACK_RADIUS = 2.2;
+
+void getEncodersValues(int32_t *encoder_values) { //return int array of encoder values
+    int i =0 ;
+    for (MotorController& controller : controllers) {
+        encoder_values[i] = controller.readEncoder()/TICKS_PER_IN;
+        i++;
+    }
+}
 
 void motorsSetVelocity(double fw_vel_in, double lateral_vel_in, double turn_vel_rad) {
     double fw_vel = fw_vel_in * TICKS_PER_IN / M_SQRT2;

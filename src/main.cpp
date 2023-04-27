@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Encoder.h>
 #include <Wire.h>
+#include <cstdint>
 
 #include "imu.h"
 #include "motors.h"
@@ -25,10 +26,11 @@ constexpr double thresh_stop = 3;
 constexpr double kPRot = 3.00;
 constexpr double kDRot = 0.50;
 
-constexpr double movementSpeed = 7;
+constexpr double movementSpeed = 3;
 
 constexpr double pTOF = -1.5;
 constexpr double avgDist = 1.55;
+constexpr double maxDist = 2.4;
 constexpr double thresh_stop = 3;
 
 enum class MovementDirection {
@@ -66,7 +68,7 @@ void baseMovement(double& fw_vel, double& lateral_vel);
 void tofFeedback(double& fw_vel, double& lateral_vel);
 void imuFeedback(double& turn_vel);
 void resetOdom(double& x, double&y, char dir);
-void incOdom(double& x, double& y, double& theta, int flEnc, int frEnc, int blEnc, int brEnc);
+void incOdom(double& x, double& y, double& theta, int32_t flEnc, int32_t frEnc, int32_t blEnc, int32_t brEnc);
 
 void loop() {
     uint32_t start = micros();
@@ -94,11 +96,12 @@ void loop() {
     double yaw = imuGetYaw();
     double angVel = imuGetAngVel();
 
-    int32_t encoder[4];
-    printf("Encoders: rl: %d rr: %d fl: %d fr: %d", encoder[0], encoder[1], encoder[2], encoder[3]);
-    incOdom(x, y, yaw, encoder[0], encoder[1], encoder[2], encoder[3]);
+    int32_t encoders[4];
+    getEncodersValues(encoders);
+    printf("Encoders: rl: %d rr: %d fl: %d fr: %d", encoders[0], encoders[1], encoders[2], encoders[3]);
+    incOdom(x, y, yaw, encoders[0], encoders[1], encoders[2], encoders[3]);
 
-    Serial.printf("yaw: %f, ang vel: %f\n", (yaw) * 180 / M_PI, angVel * 180 / M_PI);
+    Serial.printf("yaw: %f, ang vel: %f\n", (yaw-targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     Serial.printf("X: %f, Y: %f\n", x,y);
     if (movementDirection != MovementDirection::NONE) {
@@ -167,8 +170,8 @@ bool isCurrDirectionSafe() {
     double rear = tofGetRearIn();
     double left = tofGetLeftIn();
 
-    Serial.printf("left: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
-
+    Serial.printf("front: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
+    
     switch (movementDirection) {
         case MovementDirection::NORTH:
             return front > thresh_stop;
@@ -202,9 +205,14 @@ void baseMovement(double& fw_vel, double& lateral_vel) {
     }
 }
 
-double tofVelocity_calc(double tof, double avgDist, double p) {
+double tofVelocity_calc(double tof, double avgDist, double maxDist, double p) {
     double dist = min(tof, avgDist);
-    return p*dist;
+    if(tof < maxDist && tof > avgDist){
+        dist = tof;
+    }
+
+
+    return p*tof;
 }
 
 void tofFeedback(double& fw_vel, double& lateral_vel) {
@@ -213,12 +221,35 @@ void tofFeedback(double& fw_vel, double& lateral_vel) {
     double rear = tofGetRearIn();
     double left = tofGetLeftIn();
 
+    double left_enc = left, right_enc = right, front_enc = front, rear_enc = rear;
+
     // Serial.printf("front: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
 
-    fw_vel -= tofVelocity_calc(front, avgDist, pTOF);
-    fw_vel += tofVelocity_calc(rear, avgDist, pTOF);
-    lateral_vel -= tofVelocity_calc(left, avgDist, pTOF);
-    lateral_vel += tofVelocity_calc(right, avgDist, pTOF);
+    if(movementDirection == MovementDirection::NORTH || movementDirection == MovementDirection::SOUTH){
+        if(left > maxDist)
+            lateral_vel -= pTOF*avgDist;
+        else
+            lateral_vel -= pTOF*left_enc;
+        if(right > maxDist)
+            lateral_vel += pTOF*avgDist;
+        else
+            lateral_vel += pTOF*right_enc;
+    }
+    if(movementDirection == MovementDirection::EAST || movementDirection == MovementDirection::WEST){
+        if(front > maxDist)
+            fw_vel -= pTOF*avgDist;
+        else
+            fw_vel -= pTOF*front_enc;
+
+        if(rear > maxDist)
+            fw_vel += pTOF*avgDist;
+        else
+            fw_vel += pTOF*rear_enc;
+    }
+    // fw_vel -= pTOF*front_enc;//tofVelocity_calc(front, avgDist, maxDist, pTOF);
+    // fw_vel += pTOF*rear_enc;//tofVelocity_calc(rear, avgDist, maxDist, pTOF);
+    // lateral_vel -= pTOF*left_enc;//tofVelocity_calc(left, avgDist, maxDist, pTOF);
+    // lateral_vel += pTOF*right_enc;//tofVelocity_calc(right, avgDist, maxDist, pTOF);
 }
 
 void imuFeedback(double& turn_vel) {
