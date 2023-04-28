@@ -33,11 +33,13 @@ constexpr double avgDist = 1.55;
 constexpr double maxDist = 3;
 constexpr double thresh_stop = 3;
 
-double x_since_last_calibration = 0;
-double y_since_last_calibration = 0;
-
+bool hasReset = false;
 double x_in_cell = 0;
 double y_in_cell = 0;
+const double maxDistUpdate = 3.5;
+
+const double minCentered = 2;
+const double maxCentered = 4;
 
 enum class MovementDirection {
     NORTH,
@@ -76,7 +78,7 @@ void setup() {
         prev_encoders[i] = 0;
         d_encoders[i] = 0;
     }
-
+    hasReset = false;
     movementDirection = MovementDirection::NORTH;
 }
 
@@ -87,50 +89,11 @@ void tofFeedback(double& fw_vel, double& lateral_vel);
 void imuFeedback(double& turn_vel);
 void resetOdom(double& x, double&y, char dir);
 void incOdom(double& x, double& y, double& theta, double flEnc, double frEnc, double blEnc, double brEnc);
+bool isCentered(double& x_in_cell, double& y_in_cell);
 
+int count = 0;
 void loop() {
     uint32_t start = micros();
-
-    // updateDirectionFromSerial();
-
-    double prevPosX = 0;
-    double prevPosY = 0;
-    double encoder_calibration_threshold = 0.05;
-    double in_center_y = 0;
-    double in_center_x = 0;
-    if(x_since_last_calibration < encoder_calibration_threshold && prevPosX == 0){
-        prevPosX = x_since_last_calibration;
-    }
-    if(y_since_last_calibration < encoder_calibration_threshold && prevPosY == 0){
-        prevPosY = y_since_last_calibration;
-    }
-
-
-
-    if (fmod(x_since_last_calibration, 7) > 3.5 - encoder_calibration_threshold){
-
-    }
-   
-   if(x_since_last_calibration)
-    if(x > -31)
-        movementDirection = MovementDirection::WEST;
-    else
-        if(y < 32)
-            movementDirection = MovementDirection::NORTH;
-        else
-            movementDirection = MovementDirection::EAST;
-    
-    // if(x > -14.4)
-    //     movementDirection = MovementDirection::WEST;
-    // else{
-    //     if(y < 14.4)
-    //         movementDirection = MovementDirection::NORTH;
-
-    //     else
-    //         movementDirection = MovementDirection::NONE;
-    // }
-
-    // Serial.printf("1!!! time: %d\n", micros() - start);
 
     imuUpdateReadings();
 
@@ -146,7 +109,7 @@ void loop() {
     double turn_vel = 0;
 
     double yaw = imuGetYaw();
-    double angVel = imuGetAngVel();
+ //   double angVel = imuGetAngVel();
 
     getEncodersValues(curr_encoders);
     for(int i = 0; i < 4; i++){
@@ -156,9 +119,42 @@ void loop() {
         prev_encoders[i] = curr_encoders[i];
     }
 
-    printf("Encoders: rl: %d rr: %d fl: %d fr: %d", d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
+   // printf("Encoders: rl: %d rr: %d fl: %d fr: %d", d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
     incOdom(x, y, yaw, d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
 
+    
+    if(isCentered(x_in_cell, y_in_cell) && hasReset){
+        hasReset = false;
+        Serial5.print('&');
+        Serial5.print('w');
+
+        count += 1;
+        movementDirection = MovementDirection::NONE;
+        switch(count){
+            case 0:
+                movementDirection = MovementDirection::NORTH;
+                break;
+            case 1:
+                movementDirection = MovementDirection::WEST;
+                break;
+            case 2:
+                movementDirection = MovementDirection::SOUTH;
+                break;
+            case 3:
+                movementDirection = MovementDirection::EAST;
+                break;
+
+            default:
+                movementDirection = MovementDirection::NORTH;
+                count = count - 4;
+                break;
+        }
+
+
+    
+        //updateDirectionFromSerial();
+
+    }
     //Serial.printf("yaw: %f, ang vel: %f\n", (yaw-targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     //Serial.printf("X: %f, Y: %f\n", x,y);
@@ -281,31 +277,10 @@ void tofFeedback(double& fw_vel, double& lateral_vel) {
     double rear = tofGetRearIn();
     double left = tofGetLeftIn();
 
-    double left_enc = left, right_enc = right, front_enc = front, rear_enc = rear;
 
     // Serial.printf("front: %f, right: %f, rear: %f, left: %f\n", front, right, rear, left);
 
-    // if(movementDirection == MovementDirection::NORTH || movementDirection == MovementDirection::SOUTH){
-    //     if(left > maxDist)
-    //         lateral_vel -= pTOF*avgDist;
-    //     else
-    //         lateral_vel -= pTOF*left_enc;
-    //     if(right > maxDist)
-    //         lateral_vel += pTOF*avgDist;
-    //     else
-    //         lateral_vel += pTOF*right_enc;
-    // }
-    // if(movementDirection == MovementDirection::EAST || movementDirection == MovementDirection::WEST){
-    //     if(front > maxDist)
-    //         fw_vel -= pTOF*avgDist;
-    //     else
-    //         fw_vel -= pTOF*front_enc;
 
-    //     if(rear > maxDist)
-    //         fw_vel += pTOF*avgDist;
-    //     else
-    //         fw_vel += pTOF*rear_enc;
-    // }
 
     
     if(movementDirection == MovementDirection::EAST || movementDirection == MovementDirection::WEST){
@@ -353,6 +328,7 @@ void resetOdom(double& x, double&y, char dir){
     }
 }
 const double sn = 1/(2*pow(2,.5));
+
 void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, double flEnc, double frEnc){
     
     double front = tofGetFrontIn();
@@ -366,60 +342,96 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
     x_new += -sn*(flEnc + frEnc - brEnc - blEnc);
     y_new += sn*(-flEnc + frEnc + brEnc - blEnc);
  
-    // x += x_new*cos(theta) - y_new*sin(theta);
-    // y += x_new*sin(theta) + y_new*cos(theta); 
-    x+= x_new;
-    y+= y_new;
+    //double x_plus = x_new*cos(theta) - y_new*sin(theta);
+    //double y_plus = x_new*sin(theta) + y_new*cos(theta);
+    double x_plus = x_new;
+    double y_plus = y_new;
+    
+    x += x_plus;
+    y += y_plus;
+
+    // x+= x_new;
+    // y+= y_new;
 
     
     switch (movementDirection){
         case MovementDirection::NORTH:
-            if (abs(left - avgDist) > threshold || abs(right - avgDist) > threshold){
-                if(y_in_cell == 0){
-                    y_since_last_calibration = 0;
-                }
-                y_in_cell += y_new;
+            if (y_in_cell == 0 && (left > maxDistUpdate || right > maxDistUpdate)){
+                y_in_cell += y_plus;
             }
             else{
-                y_in_cell = 0;
+                if(left <= maxDistUpdate && right <= maxDistUpdate){
+                    y_in_cell = 0;
+                    hasReset = true;
+                }
+                else
+                    y_in_cell += y_plus;
             }
+            break;
         case MovementDirection::SOUTH:
-            if (abs(left - avgDist) > threshold || abs(right - avgDist) > threshold){
-                if(y_in_cell == 0){
-                    y_since_last_calibration = 0;
-                }
-                y_in_cell += y_new;
+            if (y_in_cell == 7 && (left > maxDistUpdate || right > maxDistUpdate)){
+                y_in_cell += y_plus;
             }
             else{
-                y_in_cell = 0;
+                if(left <= maxDistUpdate && right <= maxDistUpdate){
+                    y_in_cell = 7;
+                    hasReset = true;
+                }
+                else
+                    y_in_cell += y_plus;
             }
+            break;
         case MovementDirection::EAST:
-            if (abs(front - avgDist) > threshold || abs(rear - avgDist) > threshold){
-                if(x_in_cell == 0){
-                    x_since_last_calibration = 0;
-                }
-                x_in_cell += x_new;
+            if (x_in_cell == 0 && (front > maxDistUpdate || rear > maxDistUpdate)){
+                x_in_cell += x_plus;
             }
             else{
-                x_in_cell = 0;
+                if(front <= maxDistUpdate && rear <= maxDistUpdate){
+                    x_in_cell = 0;
+                    hasReset = true;
+                }
+                else
+                    x_in_cell += x_plus;
             }
+            break;
         case MovementDirection::WEST:
-            if (abs(front - avgDist) > threshold || abs(rear - avgDist) > threshold){
-                if(x_in_cell == 0){
-                    x_since_last_calibration = 0;
-                }
-                x_in_cell += x_new;
+            if (x_in_cell == 7 && (front > maxDistUpdate || rear > maxDistUpdate)){
+                x_in_cell += x_plus;
             }
             else{
-                x_in_cell = 0;
+                if(front <= maxDistUpdate && rear <= maxDistUpdate){
+                    x_in_cell = 7;
+                    hasReset = true;
+                }
+                else
+                    x_in_cell += x_plus;
             }
+            break;
         default:
             break;
     }
-    Serial.printf("x: %f, y: %f, moveDir: %f \n", x, y, movementDirection );
+    if(movementDirection != MovementDirection::NONE){
+   // Serial.printf("x: %f, y: %f, moveDir: %f \n", x, y, movementDirection );
+    Serial.printf("xincel: %f, yincel: %f\n", x_in_cell, y_in_cell);
 
-    //Serial.printf("fl: %f, fr: %f, bl: %f, br: %f\n", flEnc,frEnc, blEnc, brEnc);
+    Serial.printf("front %f, right %f, rear %f, left %f\n", front,right,rear,left);
+    }
+}
 
-    y_since_last_calibration += y_new;
-    x_since_last_calibration += x_new;
+
+bool isCentered(double& xc, double& yc){
+    switch(movementDirection){
+        case MovementDirection::NORTH:
+            return (yc > minCentered && yc < maxCentered);
+        case MovementDirection::SOUTH:
+            return (yc > minCentered && yc < maxCentered);
+        case MovementDirection::EAST:
+            return (xc > minCentered && xc < maxCentered);
+        case MovementDirection::WEST:
+            return (xc > minCentered && xc < maxCentered);
+
+        default:
+            return false;
+    }
+
 }
