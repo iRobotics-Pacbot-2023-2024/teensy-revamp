@@ -23,6 +23,7 @@ constexpr double thresh_stop = 3;
 */
 
 
+
 constexpr double kPRot = 3.00;
 constexpr double kDRot = 0.50;
 
@@ -32,6 +33,12 @@ constexpr double pTOF = -1.5;
 constexpr double avgDist = 1.55;
 constexpr double maxDist = 1.55;
 constexpr double thresh_stop = 3;
+
+double x_since_last_calibration = 0;
+double y_since_last_calibration = 0;
+
+double x_in_cell = 0;
+double y_in_cell = 0;
 
 enum class MovementDirection {
     NORTH,
@@ -83,7 +90,26 @@ void loop() {
     uint32_t start = micros();
 
     // updateDirectionFromSerial();
+
+    double prevPosX = 0;
+    double prevPosY = 0;
+    double encoder_calibration_threshold = 0.05;
+    double in_center_y = 0;
+    double in_center_x = 0;
+    if(x_since_last_calibration < encoder_calibration_threshold && prevPosX == 0){
+        prevPosX = x_since_last_calibration;
+    }
+    if(y_since_last_calibration < encoder_calibration_threshold && prevPosY == 0){
+        prevPosY = y_since_last_calibration;
+    }
+
+
+
+    if (fmod(x_since_last_calibration, 7) > 3.5 - encoder_calibration_threshold){
+
+    }
    
+   if(x_since_last_calibration)
     if(x > -31)
         movementDirection = MovementDirection::WEST;
     else
@@ -129,7 +155,7 @@ void loop() {
     for(int i = 0; i < 4; i++){
         prev_encoders[i] = curr_encoders[i];
     }
-    
+
     printf("Encoders: rl: %d rr: %d fl: %d fr: %d", d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
     incOdom(x, y, yaw, d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
 
@@ -327,6 +353,13 @@ void resetOdom(double& x, double&y, char dir){
 const double sn = 1/(2*pow(2,.5));
 void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, double flEnc, double frEnc){
     
+    double front = tofGetFrontIn();
+    double right = tofGetRightIn();
+    double rear = tofGetRearIn();
+    double left = tofGetLeftIn();
+
+    double threshold = 2;
+
     double x_new = 0, y_new = 0;
     x_new += -sn*(flEnc + frEnc - brEnc - blEnc);
     y_new += sn*(-flEnc + frEnc + brEnc - blEnc);
@@ -335,7 +368,54 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
     // y += x_new*sin(theta) + y_new*cos(theta); 
     x+= x_new;
     y+= y_new;
+
+    
+    switch (movementDirection){
+        case MovementDirection::NORTH:
+            if (abs(left - avgDist) > threshold || abs(right - avgDist) > threshold){
+                if(y_in_cell == 0){
+                    y_since_last_calibration = 0;
+                }
+                y_in_cell += y_new;
+            }
+            else{
+                y_in_cell = 0;
+            }
+        case MovementDirection::SOUTH:
+            if (abs(left - avgDist) > threshold || abs(right - avgDist) > threshold){
+                if(y_in_cell == 0){
+                    y_since_last_calibration = 0;
+                }
+                y_in_cell += y_new;
+            }
+            else{
+                y_in_cell = 0;
+            }
+        case MovementDirection::EAST:
+            if (abs(front - avgDist) > threshold || abs(rear - avgDist) > threshold){
+                if(x_in_cell == 0){
+                    x_since_last_calibration = 0;
+                }
+                x_in_cell += x_new;
+            }
+            else{
+                x_in_cell = 0;
+            }
+        case MovementDirection::WEST:
+            if (abs(front - avgDist) > threshold || abs(rear - avgDist) > threshold){
+                if(x_in_cell == 0){
+                    x_since_last_calibration = 0;
+                }
+                x_in_cell += x_new;
+            }
+            else{
+                x_in_cell = 0;
+            }
+    }
     Serial.printf("x: %f, y: %f, moveDir: %f \n", x, y, movementDirection );
 
     //Serial.printf("fl: %f, fr: %f, bl: %f, br: %f\n", flEnc,frEnc, blEnc, brEnc);
+
+    y_since_last_calibration += y_new;
+    x_since_last_calibration += x_new;
 }
