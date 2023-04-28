@@ -17,7 +17,7 @@ void motorsUpdate() {
 
 constexpr double MAX_TICKS_PER_SEC = 8000;
 
-constexpr double TICKS_PER_REV = 7. * 4 * 50;
+constexpr double TICKS_PER_REV = 357.7 * 4;
 constexpr double WHEEL_DIAMETER = 38 / 25.4;
 constexpr double IN_PER_REV = M_PI * WHEEL_DIAMETER;
 constexpr double TICKS_PER_IN = TICKS_PER_REV / IN_PER_REV;
@@ -26,10 +26,13 @@ constexpr double TRACK_RADIUS = 2.2;
 
 void getEncodersValues(double *encoder_values) { //return int array of encoder values
     int i =0 ;
+    Serial.print("Encoder values: ");
     for (MotorController& controller : controllers) {
         encoder_values[i] = controller.readEncoder()/TICKS_PER_IN;
+        Serial.printf("%f ", encoder_values[i]);
         i++;
     }
+    Serial.println("");
 }
 
 void motorsSetVelocity(double fw_vel_in, double lateral_vel_in, double turn_vel_rad) {

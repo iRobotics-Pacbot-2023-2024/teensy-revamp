@@ -38,17 +38,10 @@ void imuInit() {
 }
 
 void setReports() {
-    if (!imu.enableReport(SH2_ROTATION_VECTOR, 1000)) {
+    if (!imu.enableReport(SH2_GAME_ROTATION_VECTOR, 5000)) {
         while (true) {
             Serial.println("Could not enable rotation vector");
             delay(100);
-        }
-    }
-
-    if (!imu.enableReport(SH2_GYROSCOPE_CALIBRATED, 1000)) {
-        while (true) {
-            Serial.println("Could not enable calibrated gyro");
-            delay(109);
         }
     }
 }
@@ -70,20 +63,16 @@ bool imuUpdateReadings() {
         // Serial.printf("a%d\n", micros() - start);
         // Serial.printf("WACK: %hhd\n", reading.sensorId);
         switch(reading.sensorId) {
-            case SH2_ROTATION_VECTOR:
+            case SH2_GAME_ROTATION_VECTOR:
                 hasRotation = true;
                 rotation = reading.un.rotationVector;
-                break;
-            case SH2_GYROSCOPE_CALIBRATED:
-                hasAngVel = true;
-                gyro = reading.un.gyroscope;
                 break;
             default:
                 break;
         }
     }
 
-    return hasRotation && hasAngVel;
+    return hasRotation;
 }
 
 double imuGetYaw() {
@@ -93,8 +82,4 @@ double imuGetYaw() {
     float qk = rotation.k;
     euler_t euler = quaternionToEuler(qr, qi, qj, qk);
     return euler.yaw;
-}
-
-double imuGetAngVel() {
-    return gyro.z;
 }

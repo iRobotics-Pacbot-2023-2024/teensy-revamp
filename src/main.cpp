@@ -24,14 +24,13 @@ constexpr double thresh_stop = 3;
 
 
 
-constexpr double kPRot = 3.00;
-constexpr double kDRot = 0.50;
+constexpr double kPRot = 12;
 
-constexpr double movementSpeed = 6;
+constexpr double movementSpeed = 16;
 
-constexpr double pTOF = -1.5;
+constexpr double pTOF = 4;
 constexpr double avgDist = 1.55;
-constexpr double maxDist = 1.55;
+constexpr double maxDist = 3;
 constexpr double thresh_stop = 3;
 
 double x_since_last_calibration = 0;
@@ -45,10 +44,11 @@ enum class MovementDirection {
     EAST,
     SOUTH,
     WEST,
-    NONE
+    NONE,
+    STOP
 };
 
-MovementDirection movementDirection = MovementDirection::NONE;
+MovementDirection movementDirection = MovementDirection::STOP;
 
 double targetYaw = 0;
 double x, y = 0;
@@ -76,6 +76,8 @@ void setup() {
         prev_encoders[i] = 0;
         d_encoders[i] = 0;
     }
+
+    movementDirection = MovementDirection::NORTH;
 }
 
 void updateDirectionFromSerial();
@@ -132,12 +134,10 @@ void loop() {
 
     imuUpdateReadings();
 
-
     // Serial.printf("2!!! time: %d\n", micros() - start);
     tofUpdateReadings();
     // Serial.printf("3!!! time: %d\n", micros() - start);
-    if (!isCurrDirectionSafe())
-    {
+    if (!isCurrDirectionSafe() && movementDirection != MovementDirection::STOP) {
         movementDirection = MovementDirection::NONE;
     }
 
@@ -162,7 +162,7 @@ void loop() {
     //Serial.printf("yaw: %f, ang vel: %f\n", (yaw-targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     //Serial.printf("X: %f, Y: %f\n", x,y);
-    if (movementDirection != MovementDirection::NONE) {
+    if (movementDirection != MovementDirection::STOP) {
         baseMovement(fw_vel, lateral_vel);
         tofFeedback(fw_vel, lateral_vel);
         imuFeedback(turn_vel);
@@ -178,8 +178,7 @@ void loop() {
     
     // Serial.printf("5!!! time: %d\n", micros() - start);
 
-    // delay(20);
-
+    delay(10);
 }
 
 
@@ -203,10 +202,10 @@ void updateDirectionFromSerial() {
                 break;
             case 'r':
                 targetYaw = imuGetYaw();
-                movementDirection = MovementDirection::NONE; 
+                movementDirection = MovementDirection::STOP; 
                 break;
             default:
-                movementDirection = MovementDirection::NONE;
+                movementDirection = MovementDirection::STOP;
                 break;
         }
 
@@ -214,7 +213,7 @@ void updateDirectionFromSerial() {
     }
 
     if (millis() - lastSerialUpdate > 1000) {
-        movementDirection = MovementDirection::NONE;
+        movementDirection = MovementDirection::STOP;
     }
 }
 
@@ -264,11 +263,14 @@ void baseMovement(double& fw_vel, double& lateral_vel) {
 }
 
 double tofVelocity_calc(double tof, double avgDist, double maxDist, double p) {
-    double dist = min(tof, avgDist);
-    if(tof < maxDist && tof > avgDist){
-        dist = tof;
+    // double dist = min(tof, avgDist);
+    // if(tof < maxDist && tof > avgDist){
+    //     dist = tof;
+    // }
+    double dist = tof;
+    if (dist > maxDist) {
+        dist = avgDist;
     }
-
 
     return p*dist;
 }
@@ -307,23 +309,23 @@ void tofFeedback(double& fw_vel, double& lateral_vel) {
 
     
     if(movementDirection == MovementDirection::EAST || movementDirection == MovementDirection::WEST){
-    fw_vel -= tofVelocity_calc(front, avgDist, maxDist, pTOF);
-    fw_vel += tofVelocity_calc(rear, avgDist, maxDist, pTOF);
+        fw_vel += tofVelocity_calc(front, avgDist, maxDist, pTOF);
+        fw_vel -= tofVelocity_calc(rear, avgDist, maxDist, pTOF);
     }
-    
+
     if(movementDirection == MovementDirection::NORTH || movementDirection == MovementDirection::SOUTH){
-    lateral_vel -= tofVelocity_calc(left, avgDist, maxDist, pTOF);
-    lateral_vel += tofVelocity_calc(right, avgDist, maxDist, pTOF);
+        lateral_vel += tofVelocity_calc(left, avgDist, maxDist, pTOF);
+        lateral_vel -= tofVelocity_calc(right, avgDist, maxDist, pTOF);
     }
 }
 
 void imuFeedback(double& turn_vel) {
     double yaw = imuGetYaw();
-    double angVel = imuGetAngVel();
+
+    double yawError = fmod(fmod(targetYaw - yaw, 2 * M_PI) + 3 * M_PI, 2 * M_PI) - M_PI;
 
     //Serial.printf("yaw: %f, ang vel: %f\n", (yaw - targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
-
-    turn_vel = kPRot * (targetYaw - yaw) + kDRot * -angVel;
+    turn_vel = kPRot * yawError;
 }
 
 void resetOdom(double& x, double&y, char dir){
@@ -411,6 +413,8 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
             else{
                 x_in_cell = 0;
             }
+        default:
+            break;
     }
     Serial.printf("x: %f, y: %f, moveDir: %f \n", x, y, movementDirection );
 

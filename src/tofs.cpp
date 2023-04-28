@@ -107,17 +107,21 @@ void tofUpdateReadings() {
 constexpr double mmPerIn = 25.4;
 
 double tofGetFrontIn() {
+    Serial.printf("tofGetFrontIn: %d\n", tofDistance[2]);
     return tofDistance[2] / mmPerIn;
 }
 
 double tofGetRightIn() {
+    Serial.printf("tofGetRightIn: %d\n", tofDistance[0]);
     return tofDistance[0] / mmPerIn;
 }
 
 double tofGetRearIn() {
+    Serial.printf("tofGetRearIn: %d\n", tofDistance[1]);
     return tofDistance[1] / mmPerIn;
 }
 
 double tofGetLeftIn() {
+    Serial.printf("tofGetLeftIn: %d\n", tofDistance[3]);
     return tofDistance[3] / mmPerIn;
 }

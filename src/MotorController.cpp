@@ -1,7 +1,7 @@
 #include "MotorController.h"
 
-constexpr double kP = 4;
-constexpr double kI = 0;
+constexpr double kP = 5;
+constexpr double kI = 3;
 
 constexpr double kV = 2.7304 / 0x7fffp0;
 constexpr double kS = 3603. / 0x7fffp0;
@@ -26,8 +26,12 @@ void MotorController::update() {
     double dt = currentTs - prevTs;
     prevTs = currentTs;
 
-    double velocity = dPos / dt;
+    double velocity = static_cast<double>(dPos) / dt;
     double error = targetVel - velocity;
+
+    // Serial.printf("currPos: %d\n", currPos);
+    // Serial.printf("velocity: %f\n", velocity);
+    // Serial.printf("targetVel: %f\n", targetVel);
 
     integral += kI * error * dt;
     integral = min(max(integral, -MAX_INTEGRAL), MAX_INTEGRAL);
@@ -44,5 +48,4 @@ int32_t MotorController::readEncoder() {
 
 void MotorController::setTarget(double velTicks) {
     targetVel = velTicks;
-    update();
 }
