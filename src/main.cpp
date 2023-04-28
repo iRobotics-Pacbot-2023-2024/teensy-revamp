@@ -24,11 +24,14 @@ constexpr double thresh_stop = 3;
 
 
 
+
+constexpr double movementSpeed = 17;
+
+
 constexpr double kPRot = 12;
-
-constexpr double movementSpeed = 16;
-
 constexpr double pTOF = 4;
+constexpr double pCenter = 1;
+
 constexpr double avgDist = 1.55;
 constexpr double maxDist = 3;
 constexpr double thresh_stop = 3;
@@ -36,6 +39,7 @@ constexpr double thresh_stop = 3;
 bool hasReset = false;
 double x_in_cell = 0;
 double y_in_cell = 0;
+
 const double maxDistUpdate = 3.5;
 
 const double minCentered = 2;
@@ -78,7 +82,7 @@ void setup() {
         prev_encoders[i] = 0;
         d_encoders[i] = 0;
     }
-    hasReset = false;
+    hasReset = true;
     movementDirection = MovementDirection::NORTH;
 }
 
@@ -91,12 +95,22 @@ void resetOdom(double& x, double&y, char dir);
 void incOdom(double& x, double& y, double& theta, double flEnc, double frEnc, double blEnc, double brEnc);
 bool isCentered(double& x_in_cell, double& y_in_cell);
 
+double fw_vel = 0;
+double lateral_vel = 0;
+double turn_vel = 0;
 int count = 0;
 void loop() {
     uint32_t start = micros();
 
     imuUpdateReadings();
 
+    // /*
+
+    if(movementDirection == MovementDirection::NONE)
+        movementDirection = MovementDirection::NORTH;
+    //updateDirectionFromSerial();
+
+    // */
     // Serial.printf("2!!! time: %d\n", micros() - start);
     tofUpdateReadings();
     // Serial.printf("3!!! time: %d\n", micros() - start);
@@ -104,10 +118,9 @@ void loop() {
         movementDirection = MovementDirection::NONE;
     }
 
-    double fw_vel = 0;
-    double lateral_vel = 0;
-    double turn_vel = 0;
-
+    fw_vel = 0;
+    lateral_vel = 0;
+    turn_vel = 0;
     double yaw = imuGetYaw();
  //   double angVel = imuGetAngVel();
 
@@ -126,8 +139,7 @@ void loop() {
     if(isCentered(x_in_cell, y_in_cell) && hasReset){
         hasReset = false;
         Serial5.print('&');
-        Serial5.print('w');
-
+        ///*
         count += 1;
         movementDirection = MovementDirection::NONE;
         switch(count){
@@ -150,7 +162,7 @@ void loop() {
                 break;
         }
 
-
+        //*/
     
         //updateDirectionFromSerial();
 
@@ -208,9 +220,9 @@ void updateDirectionFromSerial() {
         lastSerialUpdate = millis();
     }
 
-    if (millis() - lastSerialUpdate > 1000) {
-        movementDirection = MovementDirection::STOP;
-    }
+    // if (millis() - lastSerialUpdate > 1000) {
+    //     movementDirection = MovementDirection::STOP;
+    // }
 }
 
 bool isCurrDirectionSafe() {
@@ -329,6 +341,7 @@ void resetOdom(double& x, double&y, char dir){
 }
 const double sn = 1/(2*pow(2,.5));
 
+
 void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, double flEnc, double frEnc){
     
     double front = tofGetFrontIn();
@@ -367,6 +380,8 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     y_in_cell += y_plus;
             }
+            
+            // fw_vel = fw_vel * abs(minCentered - y_in_cell)/minCentered;
             break;
         case MovementDirection::SOUTH:
             if (y_in_cell == 7 && (left > maxDistUpdate || right > maxDistUpdate)){
@@ -380,6 +395,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     y_in_cell += y_plus;
             }
+            // fw_vel = fw_vel * abs(maxCentered - (7-y_in_cell))/maxCentered;
             break;
         case MovementDirection::EAST:
             if (x_in_cell == 0 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -393,6 +409,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     x_in_cell += x_plus;
             }
+            // lateral_vel = lateral_vel * abs(minCentered - x_in_cell)/minCentered;
             break;
         case MovementDirection::WEST:
             if (x_in_cell == 7 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -406,6 +423,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     x_in_cell += x_plus;
             }
+            // lateral_vel = lateral_vel * abs(maxCentered - (7-x_in_cell))/maxCentered;
             break;
         default:
             break;
