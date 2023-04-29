@@ -106,8 +106,8 @@ void loop() {
 
     // /*
 
-    if(movementDirection == MovementDirection::NONE)
-        movementDirection = MovementDirection::NORTH;
+    if(!hasReset)
+        updateDirectionFromSerial();
     //updateDirectionFromSerial();
 
     // */
@@ -132,14 +132,22 @@ void loop() {
         prev_encoders[i] = curr_encoders[i];
     }
 
+
+    if (movementDirection != MovementDirection::STOP) {
+        baseMovement(fw_vel, lateral_vel);
+        tofFeedback(fw_vel, lateral_vel);
+        imuFeedback(turn_vel);
+    }
+
    // printf("Encoders: rl: %d rr: %d fl: %d fr: %d", d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
     incOdom(x, y, yaw, d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
 
     
     if(isCentered(x_in_cell, y_in_cell) && hasReset){
         hasReset = false;
-        Serial5.print('&');
-        ///*
+        delay(60);
+        updateDirectionFromSerial();
+        /*
         count += 1;
         movementDirection = MovementDirection::NONE;
         switch(count){
@@ -162,7 +170,7 @@ void loop() {
                 break;
         }
 
-        //*/
+        */
     
         //updateDirectionFromSerial();
 
@@ -170,12 +178,6 @@ void loop() {
     //Serial.printf("yaw: %f, ang vel: %f\n", (yaw-targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     //Serial.printf("X: %f, Y: %f\n", x,y);
-    if (movementDirection != MovementDirection::STOP) {
-        baseMovement(fw_vel, lateral_vel);
-        tofFeedback(fw_vel, lateral_vel);
-        imuFeedback(turn_vel);
-    }
-
     //Serial.printf("fw: %f, lat: %f, turn: %f\n", fw_vel, lateral_vel, turn_vel);
     //Serial.printf("direction: %d\n", static_cast<int>(movementDirection));
 
@@ -209,10 +211,13 @@ void updateDirectionFromSerial() {
                 movementDirection = MovementDirection::WEST;
                 break;
             case 'r':
-                targetYaw = imuGetYaw();
                 movementDirection = MovementDirection::STOP; 
                 break;
+            case 'x':
+                movementDirection = MovementDirection::NONE;
+                break; 
             default:
+                Serial.printf("ERROR: given: %c", c);
                 movementDirection = MovementDirection::STOP;
                 break;
         }
@@ -380,8 +385,9 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     y_in_cell += y_plus;
             }
+            if (y_in_cell > 0)
+                fw_vel = fw_vel * abs(maxCentered - y_in_cell)/maxCentered;
             
-            // fw_vel = fw_vel * abs(minCentered - y_in_cell)/minCentered;
             break;
         case MovementDirection::SOUTH:
             if (y_in_cell == 7 && (left > maxDistUpdate || right > maxDistUpdate)){
@@ -395,7 +401,8 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     y_in_cell += y_plus;
             }
-            // fw_vel = fw_vel * abs(maxCentered - (7-y_in_cell))/maxCentered;
+            if (y_in_cell < 7)
+                fw_vel = fw_vel * abs(minCentered - y_in_cell)/minCentered;
             break;
         case MovementDirection::EAST:
             if (x_in_cell == 0 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -409,7 +416,8 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     x_in_cell += x_plus;
             }
-            // lateral_vel = lateral_vel * abs(minCentered - x_in_cell)/minCentered;
+            if(x_in_cell > 0)
+                lateral_vel  = lateral_vel * abs(maxCentered - x_in_cell)/maxCentered;
             break;
         case MovementDirection::WEST:
             if (x_in_cell == 7 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -423,7 +431,8 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                 else
                     x_in_cell += x_plus;
             }
-            // lateral_vel = lateral_vel * abs(maxCentered - (7-x_in_cell))/maxCentered;
+            if(x_in_cell < 7)
+                lateral_vel  = lateral_vel * abs(minCentered - x_in_cell)/minCentered;
             break;
         default:
             break;
