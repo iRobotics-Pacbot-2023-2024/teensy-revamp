@@ -25,16 +25,16 @@ constexpr double thresh_stop = 3;
 
 
 
-constexpr double movementSpeed = 17;
+constexpr double movementSpeed = 16;
 
 
 constexpr double kPRot = 12;
 constexpr double pTOF = 4;
 constexpr double pCenter = 1;
 
-constexpr double avgDist = 1.55;
+constexpr double avgDist = 1.75;
 constexpr double maxDist = 3;
-constexpr double thresh_stop = 3;
+constexpr double thresh_stop = 2;
 
 bool hasReset = false;
 double x_in_cell = 0;
@@ -83,14 +83,14 @@ void setup() {
         d_encoders[i] = 0;
     }
     hasReset = true;
-    movementDirection = MovementDirection::NORTH;
+    movementDirection = MovementDirection::STOP;
 }
 
 void updateDirectionFromSerial();
 bool isCurrDirectionSafe();
 void baseMovement(double& fw_vel, double& lateral_vel);
 void tofFeedback(double& fw_vel, double& lateral_vel);
-void imuFeedback(double& turn_vel);
+void imuFeedback(double& turn_vel, double& fw_vel, double& lateral_vel);
 void resetOdom(double& x, double&y, char dir);
 void incOdom(double& x, double& y, double& theta, double flEnc, double frEnc, double blEnc, double brEnc);
 bool isCentered(double& x_in_cell, double& y_in_cell);
@@ -99,16 +99,17 @@ double fw_vel = 0;
 double lateral_vel = 0;
 double turn_vel = 0;
 int count = 0;
+
 void loop() {
     uint32_t start = micros();
 
     imuUpdateReadings();
 
     // /*
-
-    if(!hasReset)
-        updateDirectionFromSerial();
-    //updateDirectionFromSerial();
+    
+   // if(movementDirection == MovementDirection::NONE || movementDirection == MovementDirection::STOP)//(movementDirection != MovementDirection::SOUTH && movementDirection != MovementDirection::EAST && movementDirection != MovementDirection::WEST)
+        //movementDirection = MovementDirection::NORTH;
+        //updateDirectionFromSerial();
 
     // */
     // Serial.printf("2!!! time: %d\n", micros() - start);
@@ -136,19 +137,67 @@ void loop() {
     if (movementDirection != MovementDirection::STOP) {
         baseMovement(fw_vel, lateral_vel);
         tofFeedback(fw_vel, lateral_vel);
-        imuFeedback(turn_vel);
+        imuFeedback(turn_vel, fw_vel, lateral_vel);
     }
-
    // printf("Encoders: rl: %d rr: %d fl: %d fr: %d", d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
     incOdom(x, y, yaw, d_encoders[0], d_encoders[1], d_encoders[2], d_encoders[3]);
 
     
-    if(isCentered(x_in_cell, y_in_cell) && hasReset){
+    if((isCentered(x_in_cell, y_in_cell) && hasReset)){
         hasReset = false;
-        delay(60);
+        delay(10);
         updateDirectionFromSerial();
+
         /*
-        count += 1;
+        int rand = std::rand()%4;
+        bool isValid = false;
+        double front = tofGetFrontIn();
+        double right = tofGetRightIn();
+        double rear = tofGetRearIn();
+        double left = tofGetLeftIn();
+
+        while(!isValid){
+            rand = std::rand()%4;
+            Serial.printf("rand: %f\n\n", rand);
+            switch(rand){
+                case 0:
+                    if(front > 5 && movementDirection != MovementDirection::SOUTH){
+                        isValid = true; 
+                        movementDirection = MovementDirection::NORTH;
+                    }
+
+                    break;
+                case 1:
+                    if(rear > 5 && movementDirection != MovementDirection::NORTH){
+                        isValid = true; 
+                        movementDirection = MovementDirection::SOUTH;
+                    }
+                    break;
+                case 2:
+                    if(right > 5 && movementDirection != MovementDirection::WEST){
+                        isValid = true; 
+                        movementDirection = MovementDirection::EAST;
+                    }
+                    break;
+                case 3:
+                    if(left > 5 && movementDirection != MovementDirection::EAST){
+                        isValid = true; 
+                        movementDirection = MovementDirection::WEST;
+                    }
+                    break;
+                default:
+                    Serial.printf("yo, %f\n", rand);
+                    break;
+            }
+        }
+        */
+    }
+    else{
+        updateDirectionFromSerial();
+    }
+
+
+        /*
         movementDirection = MovementDirection::NONE;
         switch(count){
             case 0:
@@ -174,7 +223,7 @@ void loop() {
     
         //updateDirectionFromSerial();
 
-    }
+    
     //Serial.printf("yaw: %f, ang vel: %f\n", (yaw-targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
 
     //Serial.printf("X: %f, Y: %f\n", x,y);
@@ -186,7 +235,7 @@ void loop() {
 
     motorsUpdate();
     
-    // Serial.printf("5!!! time: %d\n", micros() - start);
+    //Serial.printf("5!!! time: %d\n", micros() - start);
 
     delay(10);
 }
@@ -212,6 +261,7 @@ void updateDirectionFromSerial() {
                 break;
             case 'r':
                 movementDirection = MovementDirection::STOP; 
+                targetYaw = imuGetYaw();
                 break;
             case 'x':
                 movementDirection = MovementDirection::NONE;
@@ -311,10 +361,15 @@ void tofFeedback(double& fw_vel, double& lateral_vel) {
     }
 }
 
-void imuFeedback(double& turn_vel) {
+void imuFeedback(double& turn_vel, double& fw_vel, double& lateral_vel) {
     double yaw = imuGetYaw();
 
     double yawError = fmod(fmod(targetYaw - yaw, 2 * M_PI) + 3 * M_PI, 2 * M_PI) - M_PI;
+
+    if (fabs(yawError) > 0.25 * M_PI) {
+        fw_vel = 0;
+        lateral_vel = 0;
+    }
 
     //Serial.printf("yaw: %f, ang vel: %f\n", (yaw - targetYaw) * 180 / M_PI, angVel * 180 / M_PI);
     turn_vel = kPRot * yawError;
@@ -346,7 +401,7 @@ void resetOdom(double& x, double&y, char dir){
 }
 const double sn = 1/(2*pow(2,.5));
 
-
+double minSpeed = 2;
 void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, double flEnc, double frEnc){
     
     double front = tofGetFrontIn();
@@ -386,7 +441,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     y_in_cell += y_plus;
             }
             if (y_in_cell > 0)
-                fw_vel = fw_vel * abs(maxCentered - y_in_cell)/maxCentered;
+                fw_vel = minSpeed + fw_vel * (abs(minCentered - y_in_cell)/minCentered);
             
             break;
         case MovementDirection::SOUTH:
@@ -402,7 +457,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     y_in_cell += y_plus;
             }
             if (y_in_cell < 7)
-                fw_vel = fw_vel * abs(minCentered - y_in_cell)/minCentered;
+                fw_vel = -minSpeed + fw_vel * (abs(maxCentered - y_in_cell)/maxCentered);
             break;
         case MovementDirection::EAST:
             if (x_in_cell == 0 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -417,7 +472,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     x_in_cell += x_plus;
             }
             if(x_in_cell > 0)
-                lateral_vel  = lateral_vel * abs(maxCentered - x_in_cell)/maxCentered;
+                lateral_vel = -minSpeed + lateral_vel * (abs(minCentered - x_in_cell)/minCentered);
             break;
         case MovementDirection::WEST:
             if (x_in_cell == 7 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -432,12 +487,12 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     x_in_cell += x_plus;
             }
             if(x_in_cell < 7)
-                lateral_vel  = lateral_vel * abs(minCentered - x_in_cell)/minCentered;
+                lateral_vel  = minSpeed + lateral_vel * (abs(maxCentered - x_in_cell)/maxCentered);
             break;
         default:
             break;
     }
-    if(movementDirection != MovementDirection::NONE){
+    if(movementDirection != MovementDirection::NONE && movementDirection != MovementDirection::STOP){
    // Serial.printf("x: %f, y: %f, moveDir: %f \n", x, y, movementDirection );
     Serial.printf("xincel: %f, yincel: %f\n", x_in_cell, y_in_cell);
 
