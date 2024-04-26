@@ -25,7 +25,7 @@ constexpr double thresh_stop = 3;
 
 
 
-constexpr double movementSpeed = 18;
+constexpr double movementSpeed = 24;
 
 constexpr double kPRot = 12;
 constexpr double pTOF = 4;
@@ -286,8 +286,6 @@ void updateDirectionFromSerial() {
     if (millis() - lastSerialUpdate > 1000) {
         movementDirection = MovementDirection::STOP;
     }
-
-    movementDirection = MovementDirection::NORTH;
 }
 
 bool isCurrDirectionSafe() {
@@ -416,7 +414,7 @@ void resetOdom(double& x, double&y, char dir){
 }
 const double sn = 1/(2*pow(2,.5));
 
-double minSpeed = 2;
+double minSpeed = 3;
 void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, double flEnc, double frEnc){
     
     double front = tofGetFrontIn();
@@ -456,7 +454,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     y_in_cell += y_plus;
             }
             if (y_in_cell > 0)
-                fw_vel = min(minSpeed + fw_vel * (abs(minCentered - y_in_cell)/minCentered), movementSpeed);
+                fw_vel = min(minSpeed + fw_vel * powf(abs(minCentered - y_in_cell)/minCentered, 1.7), movementSpeed);
             
             break;
         case MovementDirection::SOUTH:
@@ -472,7 +470,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     y_in_cell += y_plus;
             }
             if (y_in_cell < 7)
-                fw_vel = max(-minSpeed + fw_vel * (abs(maxCentered - y_in_cell)/maxCentered), -movementSpeed);
+                fw_vel = max(-minSpeed + fw_vel * powf(abs(maxCentered - y_in_cell)/maxCentered, 1.7), -movementSpeed);
             break;
         case MovementDirection::EAST:
             if (x_in_cell == 0 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -487,7 +485,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     x_in_cell += x_plus;
             }
             if(x_in_cell > 0)
-                lateral_vel = max(-minSpeed + lateral_vel * (abs(minCentered - x_in_cell)/minCentered), -movementSpeed);
+                lateral_vel = max(-minSpeed + lateral_vel * powf(abs(minCentered - x_in_cell)/minCentered, 1.7), -movementSpeed);
             break;
         case MovementDirection::WEST:
             if (x_in_cell == 7 && (front > maxDistUpdate || rear > maxDistUpdate)){
@@ -502,7 +500,7 @@ void incOdom(double& x, double& y, double& theta, double blEnc, double brEnc, do
                     x_in_cell += x_plus;
             }
             if(x_in_cell < 7)
-                lateral_vel  = min(minSpeed + lateral_vel * (abs(maxCentered - x_in_cell)/maxCentered), movementSpeed);
+                lateral_vel  = min(minSpeed + lateral_vel * powf(abs(maxCentered - x_in_cell)/maxCentered, 1.7), movementSpeed);
             break;
         default:
             break;
