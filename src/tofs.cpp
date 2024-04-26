@@ -43,20 +43,30 @@ void tofInit() {
         status = tof.VL53L4CX_SetMeasurementTimingBudgetMicroSeconds(8000);
         if(status != 0){
             while (true){
-                Serial.printf("tof %d: clear: %d\n", i, status);
+                Serial.printf("tof %d: budget: %d\n", i, status);
                 delay(1000);
             }
         }
         
         // the maximum distance that the sensor can read, not sure what units
-        status = tof.VL53L4CX_SetTuningParameter(VL53L4CX_TUNINGPARM_RESET_MERGE_THRESHOLD, 5000);
+        status = tof.VL53L4CX_SetTuningParameter(VL53L4CX_TUNINGPARM_RESET_MERGE_THRESHOLD, 1000);
         if(status != 0){
             while (true){
-                Serial.printf("tof %d: clear: %d\n", i, status);
+                Serial.printf("tof %d: merge thresh: %d\n", i, status);
                 delay(1000);
             }
         }
         
+    }
+}
+
+void tofBeginReadings() {
+    for (int i = 0; i < 4; i++) {
+        auto& tof = tofs[i];
+        int status = tof.VL53L4CX_ClearInterruptAndStartMeasurement();
+        if (status != 0) {
+            Serial.printf("tof %d: clear: %d\n", i, status);
+        }
     }
 }
 
@@ -66,14 +76,10 @@ void tofUpdateReadings() {
     for (int i = 0; i < 4; i++) {
         auto& tof = tofs[i];
 
-        uint8_t dataReady = 0;
-        int status = tof.VL53L4CX_GetMeasurementDataReady(&dataReady);
+        int status;
+        status = tof.VL53L4CX_WaitMeasurementDataReady();
         if (status != 0) {
             Serial.printf("tof %d: data ready: %d\n", i, status);
-            continue;
-        }
-
-        if (!dataReady) {
             continue;
         }
 
@@ -95,12 +101,7 @@ void tofUpdateReadings() {
 
         tofDistance[i] = results.RangeData->RangeMinMilliMeter;
 
-        if (status == 0) {
-            status = tof.VL53L4CX_ClearInterruptAndStartMeasurement();
-            if (status != 0) {
-                Serial.printf("tof %d: clear: %d\n", i, status);
-            }
-        }
+        Serial.printf("tof %d: %d\n", i, tofDistance[i]);
     }
 }
 

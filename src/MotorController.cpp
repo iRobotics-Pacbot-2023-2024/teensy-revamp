@@ -6,7 +6,7 @@ constexpr double kI = 3;
 constexpr double kV = 2.7304 / 0x7fffp0;
 constexpr double kS = 3603. / 0x7fffp0;
 
-constexpr double MAX_INTEGRAL = 0.15 / kV;
+constexpr double MAX_INTEGRAL = 0.2 / kV;
 
 MotorController::MotorController(Motor& motor, Encoder& encoder):
     motor(motor), encoder(encoder) {
